@@ -19,3 +19,5 @@ fun promptString(prompt: String): String? {
 }
 
 inline fun <T : Any> T.doSynchronized(action: T.() -> Unit) = synchronized(this) { action() }
+
+operator fun String.times(times: Int) = buildString { repeat(times) { append(this) } }

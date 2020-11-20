@@ -111,7 +111,45 @@ class UpdateHandler : Client.ResultHandler {
             is TdApi.UpdateUserFullInfo -> usersFullInfo[result.userId] = result.userFullInfo
             is TdApi.UpdateBasicGroupFullInfo -> basicGroupsFullInfo[result.basicGroupId] = result.basicGroupFullInfo
             is TdApi.UpdateSupergroupFullInfo -> superGroupsFullInfo[result.supergroupId] = result.supergroupFullInfo
-            else -> /*print("Unsupported update:$newLine$result")*/{}
+
+            is TdApi.UpdateNewMessage -> {
+                println("\r\n${result.message.chatId}; ${result.message.content}; ${"-" * 128}")
+
+                if (result.message.chatId in chatsToForward) {
+                    val forwardMessages = TdApi.ForwardMessages(
+                        -1001236420112,
+                        result.message.chatId,
+                        longArrayOf(result.message.id),
+                        null,
+                        false,
+                        false
+                    )
+
+                    client?.send(forwardMessages, defaultHandler)
+                }
+            }
+
+            is TdApi.ForwardMessages -> {
+                println("\r\n${result.chatId}; ${result}; ${"-" * 128}")
+
+                if (result.chatId in chatsToForward) {
+                    if (result.chatId in chatsToForward) {
+                        val forwardMessages = TdApi.ForwardMessages(
+                            -1001236420112,
+                            result.chatId,
+                            result.messageIds,
+                            null,
+                            false,
+                            false
+                        )
+
+                        client?.send(forwardMessages, defaultHandler)
+                    }
+                }
+            }
+            else -> /*print("Unsupported update:$newLine$result")*/ {
+
+            }
         }
     }
 }
