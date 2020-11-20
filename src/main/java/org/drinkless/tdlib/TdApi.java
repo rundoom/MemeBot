@@ -7361,6 +7361,7 @@ public class TdApi {
     }
 
     public abstract static class MessageContent extends Object {
+        public FormattedText caption;
     }
 
     public static class MessageText extends MessageContent {
@@ -7373,6 +7374,7 @@ public class TdApi {
         public MessageText(FormattedText text, WebPage webPage) {
             this.text = text;
             this.webPage = webPage;
+            this.caption = text;
         }
 
         public static final int CONSTRUCTOR = 1989037971;
@@ -7385,7 +7387,6 @@ public class TdApi {
 
     public static class MessageAnimation extends MessageContent {
         public Animation animation;
-        public FormattedText caption;
         public boolean isSecret;
 
         public MessageAnimation() {
@@ -7407,7 +7408,6 @@ public class TdApi {
 
     public static class MessageAudio extends MessageContent {
         public Audio audio;
-        public FormattedText caption;
 
         public MessageAudio() {
         }
@@ -7427,7 +7427,6 @@ public class TdApi {
 
     public static class MessageDocument extends MessageContent {
         public Document document;
-        public FormattedText caption;
 
         public MessageDocument() {
         }
@@ -7447,7 +7446,6 @@ public class TdApi {
 
     public static class MessagePhoto extends MessageContent {
         public Photo photo;
-        public FormattedText caption;
         public boolean isSecret;
 
         public MessagePhoto() {
@@ -7500,7 +7498,6 @@ public class TdApi {
 
     public static class MessageVideo extends MessageContent {
         public Video video;
-        public FormattedText caption;
         public boolean isSecret;
 
         public MessageVideo() {
@@ -7557,7 +7554,6 @@ public class TdApi {
 
     public static class MessageVoiceNote extends MessageContent {
         public VoiceNote voiceNote;
-        public FormattedText caption;
         public boolean isListened;
 
         public MessageVoiceNote() {

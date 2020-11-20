@@ -115,7 +115,10 @@ class UpdateHandler : Client.ResultHandler {
             is TdApi.UpdateNewMessage -> {
                 println("\r\n${result.message.chatId}; ${result.message.content}; ${"-" * 128}")
 
-                if (result.message.chatId in chatsToForward) {
+                if (result.message.chatId in chatsToForward && result.message.content !is TdApi.MessageText && !result.isHavingUrl) {
+
+                    println("caption is: " + result.message.content.caption)
+
                     val forwardMessages = TdApi.ForwardMessages(
                         -1001236420112,
                         result.message.chatId,
@@ -128,28 +131,14 @@ class UpdateHandler : Client.ResultHandler {
                     client?.send(forwardMessages, defaultHandler)
                 }
             }
-
-            is TdApi.ForwardMessages -> {
-                println("\r\n${result.chatId}; ${result}; ${"-" * 128}")
-
-                if (result.chatId in chatsToForward) {
-                    if (result.chatId in chatsToForward) {
-                        val forwardMessages = TdApi.ForwardMessages(
-                            -1001236420112,
-                            result.chatId,
-                            result.messageIds,
-                            null,
-                            false,
-                            false
-                        )
-
-                        client?.send(forwardMessages, defaultHandler)
-                    }
-                }
-            }
             else -> /*print("Unsupported update:$newLine$result")*/ {
 
             }
         }
     }
 }
+
+private val TdApi.UpdateNewMessage.isHavingUrl
+    get() = message.content.caption?.let { formattedText ->
+        formattedText.entities.any { it.type is TdApi.TextEntityTypeTextUrl || it.type is TdApi.TextEntityTypeUrl }
+    } ?: false

@@ -44,7 +44,7 @@ const val commandsLine =
 
 var currentPrompt: String? = null
 
-val chatsToForward = setOf(
+val chatsToForward = setOf<Long>(
     -1001163283262,
     -1001176110156,
     -1001224122704,
@@ -108,7 +108,8 @@ val chatsToForward = setOf(
     -1001066741008,
     -1001446737159,
     -1001178606214,
-    -1001431209394
+    -1001431209394,
+    153174359
     )
 
 fun onAuthorizationStateUpdated(authorizationState: AuthorizationState?) {
