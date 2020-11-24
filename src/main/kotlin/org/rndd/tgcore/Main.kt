@@ -1,8 +1,9 @@
 package org.rndd.tgcore
 
 import org.drinkless.tdlib.Client
-import org.drinkless.tdlib.TdApi.*
+import org.drinkless.tdlib.TdApi
 import org.rndd.tgbot.initTelegramBot
+import java.io.File
 import java.io.IOError
 import java.io.IOException
 import kotlin.concurrent.thread
@@ -10,10 +11,10 @@ import kotlin.concurrent.thread
 
 fun main() {
     thread { initTelegramBot() }
-    System.load("Win10\\tdjni.dll")
+    System.load(File("Win10\\tdjni.dll").absolutePath)
     // disable TDLib log
-    Client.execute(SetLogVerbosityLevel(0))
-    if (Client.execute(SetLogStream(LogStreamFile("tdlib.log", 1 shl 27, false))) is Error) {
+    Client.execute(TdApi.SetLogVerbosityLevel(0))
+    if (Client.execute(TdApi.SetLogStream(TdApi.LogStreamFile("tdlib.log", 1 shl 27, false))) is Error) {
         throw IOError(IOException("Write access to the current directory is required"))
     }
 
@@ -21,7 +22,7 @@ fun main() {
     client = Client.create(UpdateHandler(), null, null)
 
     // test Client.execute
-    defaultHandler.onResult(Client.execute(GetTextEntities("@telegram /test_command https://telegram.org telegram.me @gif @test")))
+    defaultHandler.onResult(Client.execute(TdApi.GetTextEntities("@telegram /test_command https://telegram.org telegram.me @gif @test")))
 
     // main loop
     while (!needQuit) {
@@ -53,25 +54,25 @@ fun getCommand() {
                 if (commands.size > 1) limit = commands[1].toInt()
                 getMainChatList(limit)
             }
-            "gc" -> client?.send(GetChat(commands[1].toLong()), defaultHandler)
-            "me" -> client?.send(GetMe(), defaultHandler)
+            "gc" -> client?.send(TdApi.GetChat(commands[1].toLong()), defaultHandler)
+            "me" -> client?.send(TdApi.GetMe(), defaultHandler)
             "sm" -> {
                 val args = commands[1].split(" ".toRegex(), 2).toTypedArray()
                 sendMessage(args[0].toLong(), args[1])
             }
             "gh" -> {
                 val args = commands[1].split(" ".toRegex()).toTypedArray()
-                val chatHistory = GetChatHistory(args[0].toLong(), 0L, 0, 50, false)
+                val chatHistory = TdApi.GetChatHistory(args[0].toLong(), 0L, 0, 50, false)
                 client?.send(chatHistory, defaultHandler)
             }
             "lo" -> {
                 haveAuthorization = false
-                client?.send(LogOut(), defaultHandler)
+                client?.send(TdApi.LogOut(), defaultHandler)
             }
             "q" -> {
                 needQuit = true
                 haveAuthorization = false
-                client?.send(Close(), defaultHandler)
+                client?.send(TdApi.Close(), defaultHandler)
             }
             else -> System.err.println("Unsupported command: $command")
         }

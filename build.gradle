@@ -33,6 +33,16 @@ compileTestKotlin {
 
 shadowJar {
     manifest {
-        attributes "Main-Class": "org.rndd.MainKt"
+        attributes "Main-Class": "org.rndd.tgcore.MainKt"
+    }
+
+    copy {
+        from 'config.json'
+        into "${libsDir.path}"
+    }
+
+    copy {
+        from 'Win10'
+        into "${libsDir.path}/Win10"
     }
 }
