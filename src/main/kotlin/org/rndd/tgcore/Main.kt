@@ -1,13 +1,16 @@
-package org.rndd
+package org.rndd.tgcore
 
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi.*
+import org.rndd.tgbot.initTelegramBot
 import java.io.IOError
 import java.io.IOException
+import kotlin.concurrent.thread
 
 
 fun main() {
-    System.loadLibrary("tdjni")
+    thread { initTelegramBot() }
+    System.load("Win10\\tdjni.dll")
     // disable TDLib log
     Client.execute(SetLogVerbosityLevel(0))
     if (Client.execute(SetLogStream(LogStreamFile("tdlib.log", 1 shl 27, false))) is Error) {
@@ -47,9 +50,7 @@ fun getCommand() {
         when (commands[0]) {
             "gcs" -> {
                 var limit = 200
-                if (commands.size > 1) {
-                    limit = commands[1].toInt()
-                }
+                if (commands.size > 1) limit = commands[1].toInt()
                 getMainChatList(limit)
             }
             "gc" -> client?.send(GetChat(commands[1].toLong()), defaultHandler)

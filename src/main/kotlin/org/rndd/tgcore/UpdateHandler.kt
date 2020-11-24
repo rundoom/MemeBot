@@ -1,4 +1,4 @@
-package org.rndd
+package org.rndd.tgcore
 
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
@@ -113,14 +113,14 @@ class UpdateHandler : Client.ResultHandler {
             is TdApi.UpdateSupergroupFullInfo -> superGroupsFullInfo[result.supergroupId] = result.supergroupFullInfo
 
             is TdApi.UpdateNewMessage -> {
-                println("\r\n${result.message.chatId}; ${result.message.content}; ${"-" * 128}")
+//                println("\r\n${result.message.chatId}; ${result.message.content}; ${"-" * 128}")
 
-                if (result.message.chatId in chatsToForward && result.message.content !is TdApi.MessageText && !result.isHavingUrl) {
+                if (result.message.chatId in config.channelsToMonitor && result.message.content !is TdApi.MessageText && !result.isHavingUrl) {
 
-                    println("caption is: " + result.message.content.caption)
+//                    println("caption is: " + result.message.content.caption)
 
                     val forwardMessages = TdApi.ForwardMessages(
-                        -1001236420112,
+                        config.proxyChannelId,
                         result.message.chatId,
                         longArrayOf(result.message.id),
                         null,
@@ -128,7 +128,9 @@ class UpdateHandler : Client.ResultHandler {
                         false
                     )
 
-                    client?.send(forwardMessages, defaultHandler)
+                    client?.send(forwardMessages,
+                        defaultHandler
+                    )
                 }
             }
             else -> /*print("Unsupported update:$newLine$result")*/ {

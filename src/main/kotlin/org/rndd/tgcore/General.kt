@@ -1,7 +1,11 @@
-package org.rndd
+package org.rndd.tgcore
 
+import com.github.salomonbrys.kotson.fromJson
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi.*
+import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -42,75 +46,11 @@ val newLine = System.getProperty("line.separator")!!
 const val commandsLine =
     "Enter command (gcs - GetChats, gc <chatId> - GetChat, me - GetMe, sm <chatId> <message> - SendMessage, lo - LogOut, q - Quit): "
 
-var currentPrompt: String? = null
+val gson = Gson()
 
-val chatsToForward = setOf<Long>(
-    -1001163283262,
-    -1001176110156,
-    -1001224122704,
-    -1001321995082,
-    -1001096995471,
-    -1001138364574,
-    -1001083783239,
-    -1001137657151,
-    -1001142271647,
-    -1001077067818,
-    -1001105058370,
-    -1001312196507,
-    -1001177572454,
-    -1001350302883,
-    -1001348466325,
-    -1001274590445,
-    -1001283462264,
-    -1001221106818,
-    -1001301824150,
-    -1001259600265,
-    -1001311027302,
-    -1001081170974,
-    -1001470029709,
-    -1001407199811,
-    -1001283644155,
-    -1001156882327,
-    -1001382063570,
-    -1001068134937,
-    -1001107552211,
-    -1001129882018,
-    -1001338222381,
-    -1001080141747,
-    -1001080715773,
-    -1001142011374,
-    -1001143742161,
-    -1001102330107,
-    -1001191565000,
-    -1001133710409,
-    -1001477635750,
-    -1001125122444,
-    -1001179898802,
-    -1001150334062,
-    -1001454077785,
-    -1001064421066,
-    -1001251944018,
-    -1001305157744,
-    -1001179017639,
-    -1001346439625,
-    -1001411585594,
-    -1001233194631,
-    -1001256080372,
-    -1001143340196,
-    -1001168801434,
-    -1001131054012,
-    -1001147461197,
-    -1001065273723,
-    -1001144150710,
-    -1001231697195,
-    -1001117105424,
-    -1001140214593,
-    -1001066741008,
-    -1001446737159,
-    -1001178606214,
-    -1001431209394,
-    153174359
-    )
+val config = gson.fromJson<Config>(File("config.json").readText())
+
+var currentPrompt: String? = null
 
 fun onAuthorizationStateUpdated(authorizationState: AuthorizationState?) {
     if (authorizationState != null) {
@@ -129,7 +69,10 @@ fun onAuthorizationStateUpdated(authorizationState: AuthorizationState?) {
             parameters.deviceModel = "Desktop"
             parameters.applicationVersion = "1.0"
             parameters.enableStorageOptimizer = true
-            client?.send(SetTdlibParameters(parameters), AuthorizationRequestHandler())
+            client?.send(
+                SetTdlibParameters(parameters),
+                AuthorizationRequestHandler()
+            )
         }
         AuthorizationStateWaitEncryptionKey.CONSTRUCTOR -> client?.send(
             CheckDatabaseEncryptionKey(),
@@ -137,7 +80,10 @@ fun onAuthorizationStateUpdated(authorizationState: AuthorizationState?) {
         )
         AuthorizationStateWaitPhoneNumber.CONSTRUCTOR -> {
             val phoneNumber = promptString("Please enter phone number: ")
-            client?.send(SetAuthenticationPhoneNumber(phoneNumber, null), AuthorizationRequestHandler())
+            client?.send(
+                SetAuthenticationPhoneNumber(phoneNumber, null),
+                AuthorizationRequestHandler()
+            )
         }
         AuthorizationStateWaitOtherDeviceConfirmation.CONSTRUCTOR -> {
             val link = (authorizationState as AuthorizationStateWaitOtherDeviceConfirmation).link
@@ -145,16 +91,25 @@ fun onAuthorizationStateUpdated(authorizationState: AuthorizationState?) {
         }
         AuthorizationStateWaitCode.CONSTRUCTOR -> {
             val code = promptString("Please enter authentication code: ")
-            client?.send(CheckAuthenticationCode(code), AuthorizationRequestHandler())
+            client?.send(
+                CheckAuthenticationCode(code),
+                AuthorizationRequestHandler()
+            )
         }
         AuthorizationStateWaitRegistration.CONSTRUCTOR -> {
             val firstName = promptString("Please enter your first name: ")
             val lastName = promptString("Please enter your last name: ")
-            client?.send(RegisterUser(firstName, lastName), AuthorizationRequestHandler())
+            client?.send(
+                RegisterUser(firstName, lastName),
+                AuthorizationRequestHandler()
+            )
         }
         AuthorizationStateWaitPassword.CONSTRUCTOR -> {
             val password = promptString("Please enter password: ")
-            client?.send(CheckAuthenticationPassword(password), AuthorizationRequestHandler())
+            client?.send(
+                CheckAuthenticationPassword(password),
+                AuthorizationRequestHandler()
+            )
         }
         AuthorizationStateReady.CONSTRUCTOR -> {
             haveAuthorization = true
@@ -194,14 +149,24 @@ fun setChatPositions(chat: Chat, positions: Array<ChatPosition?>) {
         synchronized(chat) {
             for (position in chat.positions) {
                 if (position.list.constructor == ChatListMain.CONSTRUCTOR) {
-                    val isRemoved = mainChatList.remove(OrderedChat(chat.id, position))
+                    val isRemoved = mainChatList.remove(
+                        OrderedChat(
+                            chat.id,
+                            position
+                        )
+                    )
                     assert(isRemoved)
                 }
             }
             chat.positions = positions
             for (position in chat.positions) {
                 if (position.list.constructor == ChatListMain.CONSTRUCTOR) {
-                    val isAdded = mainChatList.add(OrderedChat(chat.id, position))
+                    val isAdded = mainChatList.add(
+                        OrderedChat(
+                            chat.id,
+                            position
+                        )
+                    )
                     assert(isAdded)
                 }
             }
@@ -217,7 +182,10 @@ fun sendMessage(chatId: Long, message: String) {
     )
     val replyMarkup: ReplyMarkup = ReplyMarkupInlineKeyboard(arrayOf(row, row, row))
     val content: InputMessageContent = InputMessageText(FormattedText(message, null), false, true)
-    client?.send(SendMessage(chatId, 0, 0, null, replyMarkup, content), defaultHandler)
+    client?.send(
+        SendMessage(chatId, 0, 0, null, replyMarkup, content),
+        defaultHandler
+    )
 }
 
 fun getMainChatList(limit: Int) {
@@ -260,3 +228,10 @@ fun getMainChatList(limit: Int) {
     }
 }
 
+data class Config(
+    @SerializedName("bot_token") val botToken: String,
+    @SerializedName("channels_to_monitor") val channelsToMonitor: Set<Long>,
+    @SerializedName("main_channel_id") val mainChannelId: Long,
+    @SerializedName("proxy_channel_id") val proxyChannelId: Long,
+    @SerializedName("personal_chat_id") val personalChatId: Long
+)

@@ -1,4 +1,4 @@
-package org.rndd
+package org.rndd.tgcore
 
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi

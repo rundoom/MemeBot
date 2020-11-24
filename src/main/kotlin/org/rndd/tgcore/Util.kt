@@ -1,4 +1,4 @@
-package org.rndd
+package org.rndd.tgcore
 
 import java.io.BufferedReader
 import java.io.IOException
