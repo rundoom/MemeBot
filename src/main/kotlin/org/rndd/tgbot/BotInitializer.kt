@@ -2,10 +2,8 @@ package org.rndd.tgbot
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
-import forwardFromProxy
-import getMyChatId
 import okhttp3.logging.HttpLoggingInterceptor
-import org.rndd.tgcore.config
+import org.rndd.config
 
 
 val bot = bot {
@@ -15,6 +13,7 @@ val bot = bot {
     dispatch {
         forwardFromProxy()
         getMyChatId()
+        addChannel()
     }
 }
 

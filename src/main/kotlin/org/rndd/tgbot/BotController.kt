@@ -1,8 +1,12 @@
+package org.rndd.tgbot
+
 import com.github.kotlintelegrambot.dispatcher.Dispatcher
+import com.github.kotlintelegrambot.dispatcher.channel
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.extensions.filters.Filter
-import org.rndd.tgcore.config
+import org.rndd.config
+import org.rndd.xodusStore
 
 
 fun Dispatcher.getMyChatId() = command("my_chat_id") { bot, update ->
@@ -11,4 +15,8 @@ fun Dispatcher.getMyChatId() = command("my_chat_id") { bot, update ->
 
 fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) { bot, update ->
     bot.forwardMessage(config.mainChannelId, config.personalChatId, update.message!!.messageId)
+}
+
+fun Dispatcher.addChannel() = channel { bot, update ->
+    println()
 }
