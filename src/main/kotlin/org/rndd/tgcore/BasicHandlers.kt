@@ -2,7 +2,6 @@ package org.rndd.tgcore
 
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
-import org.rndd.newLine
 
 
 class DefaultExceptionHandler : Client.ExceptionHandler {
