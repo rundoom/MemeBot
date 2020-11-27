@@ -1,7 +1,9 @@
 package org.rndd.tgcore
 
+import kotlinx.dnq.query.*
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
+import org.rndd.*
 
 class UpdateHandler : Client.ResultHandler {
     override fun onResult(result: TdApi.Object) {
@@ -9,7 +11,7 @@ class UpdateHandler : Client.ResultHandler {
             is TdApi.UpdateAuthorizationState -> onAuthorizationStateUpdated(result.authorizationState)
 
             is TdApi.UpdateUser -> users[result.user.id] = result.user
-            is TdApi.UpdateUserStatus -> users[result.userId]?.doSynchronized { status = result.status }
+            is TdApi.UpdateUserStatus -> users[result.userId]?.doSynchronized { status = result.status }!!
 
             is TdApi.UpdateBasicGroup -> basicGroups[result.basicGroup.id] = result.basicGroup
             is TdApi.UpdateSupergroup -> superGroups[result.supergroup.id] = result.supergroup
@@ -22,7 +24,7 @@ class UpdateHandler : Client.ResultHandler {
                 setChatPositions(this, positions)
             }
 
-            is TdApi.UpdateChatTitle -> chats[result.chatId]?.doSynchronized { title = result.title }
+            is TdApi.UpdateChatTitle -> chats[result.chatId]?.doSynchronized { title = result.title }!!
             is TdApi.UpdateChatPhoto -> chats[result.chatId]?.doSynchronized { photo = result.photo }
 
             is TdApi.UpdateChatLastMessage -> chats[result.chatId]?.doSynchronized {
@@ -111,30 +113,8 @@ class UpdateHandler : Client.ResultHandler {
             is TdApi.UpdateUserFullInfo -> usersFullInfo[result.userId] = result.userFullInfo
             is TdApi.UpdateBasicGroupFullInfo -> basicGroupsFullInfo[result.basicGroupId] = result.basicGroupFullInfo
             is TdApi.UpdateSupergroupFullInfo -> superGroupsFullInfo[result.supergroupId] = result.supergroupFullInfo
-
-            is TdApi.UpdateNewMessage -> {
-//                println("\r\n${result.message.chatId}; ${result.message.content}; ${"-" * 128}")
-
-                if (result.message.chatId in config.channelsToMonitor && result.message.content !is TdApi.MessageText && !result.isHavingUrl) {
-
-//                    println("caption is: " + result.message.content.caption)
-
-                    val forwardMessages = TdApi.ForwardMessages(
-                        config.proxyChannelId,
-                        result.message.chatId,
-                        longArrayOf(result.message.id),
-                        null,
-                        false,
-                        false
-                    )
-
-                    client?.send(forwardMessages,
-                        defaultHandler
-                    )
-                }
-            }
-            else -> /*print("Unsupported update:$newLine$result")*/ {
-
+            is TdApi.UpdateNewMessage -> handleUpdateNewMessage(result)
+            else -> {
             }
         }
     }
@@ -144,3 +124,43 @@ private val TdApi.UpdateNewMessage.isHavingUrl
     get() = message.content.caption?.let { formattedText ->
         formattedText.entities.any { it.type is TdApi.TextEntityTypeTextUrl || it.type is TdApi.TextEntityTypeUrl }
     } ?: false
+
+private val TdApi.UpdateNewMessage.minithumbnailMd5: String?
+    get() = when (val content = message.content) {
+        is TdApi.MessagePhoto -> content.photo.minithumbnail.data.md5
+        is TdApi.MessageVideo -> content.video.minithumbnail.data.md5
+        is TdApi.MessageAnimation -> content.animation.minithumbnail.data.md5
+        else -> null
+    }
+
+private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
+    val minithumbnailMd5 = result.minithumbnailMd5 ?: return
+
+    val isExists = xodusStore.transactional {
+        XdMinithumbnail.filter { it.md5 eq minithumbnailMd5 }
+            .firstOrNull()
+            .let { it != null }
+    }
+
+    if (
+        result.message.chatId in config.channelsToMonitor
+        && result.message.content !is TdApi.MessageText
+        && !result.isHavingUrl
+        && !isExists
+    ) {
+        val forwardMessages = TdApi.ForwardMessages(
+            config.proxyChannelId,
+            result.message.chatId,
+            longArrayOf(result.message.id),
+            null,
+            false,
+            false
+        )
+
+        client?.send(forwardMessages, defaultHandler)
+
+        xodusStore.transactional {
+            XdMinithumbnail.new { md5 = minithumbnailMd5 }
+        }
+    }
+}
