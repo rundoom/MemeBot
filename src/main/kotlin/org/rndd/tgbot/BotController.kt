@@ -5,6 +5,7 @@ import com.github.kotlintelegrambot.dispatcher.channel
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.extensions.filters.Filter
+import kotlinx.dnq.creator.findOrNew
 import kotlinx.dnq.query.asIterable
 import kotlinx.dnq.query.filter
 import kotlinx.dnq.query.sortedBy
@@ -25,7 +26,7 @@ fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) 
 }
 
 fun Dispatcher.addChannel() = command("add_channel") { bot, update ->
-    val channelId = update.message?.text?.substringAfter("/add_channel")?.toLong()
+    val channelId = update.message?.text?.substringAfter("/add_channel ")?.toLong()
     if (channelId == null) {
         bot.sendMessage(chatId = update.message!!.chat.id, text = "error adding channel")
         return@command
@@ -34,10 +35,11 @@ fun Dispatcher.addChannel() = command("add_channel") { bot, update ->
     client?.send(TdApi.GetChat(channelId)) { res ->
         res as TdApi.Chat
         xodusStore.transactional {
-            XdChat.new {
-                title = res.title
+            XdChat.findOrNew {
                 chatId = res.id
-                state = XdChatState.FAVORITE
+            }.also {
+                it.title = res.title
+                it.state = XdChatState.FAVORITE
             }
         }
     }
@@ -58,8 +60,8 @@ fun Dispatcher.getAddedChannels() = command("get_added_channels") { bot, update 
     xodusStore.transactional {
         val chatsList = XdChat.filter {
             it.state eq XdChatState.FAVORITE
-        }.asIterable().joinToString {
-            "${it.chatId}; ${it.title}\r\n"
+        }.asIterable().joinToString("\r\n") {
+            "${it.chatId}; ${it.title}"
         }
         bot.sendMessage(chatId = update.message!!.chat.id, text = chatsList)
     }
