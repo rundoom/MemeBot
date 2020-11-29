@@ -145,6 +145,7 @@ private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
     if (
         result.message.chatId in config.channelsToMonitor
         && result.message.content !is TdApi.MessageText
+        && result.message.replyMarkup == null
         && !result.isHavingUrl
         && !isExists
     ) {

@@ -236,7 +236,9 @@ fun getMainChatList(limit: Int) {
         for (i in 0 until limit) {
             val chatId = iter.next().chatId
             val chat = chats[chatId]
-            synchronized(chat!!) { println(chatId.toString() + ": " + chat.title) }
+
+            val addedStr = if (chatId < 0 && chatId !in config.channelsToMonitor) "non added" else ""
+            synchronized(chat!!) { println("$chatId: ${chat.title} $addedStr") }
         }
     }
 }
