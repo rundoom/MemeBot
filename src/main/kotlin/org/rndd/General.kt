@@ -21,7 +21,6 @@ val config = gson.fromJson<Config>(File("config.json").readText())
 
 data class Config(
     @SerializedName("bot_token") val botToken: String,
-    @SerializedName("channels_to_monitor") val channelsToMonitor: Set<Long>,
     @SerializedName("main_channel_id") val mainChannelId: Long,
     @SerializedName("proxy_channel_id") val proxyChannelId: Long,
     @SerializedName("personal_chat_id") val personalChatId: Long,

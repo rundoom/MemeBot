@@ -1,11 +1,8 @@
 package org.rndd
 
 import jetbrains.exodus.entitystore.Entity
-import kotlinx.dnq.XdEntity
-import kotlinx.dnq.XdNaturalEntityType
+import kotlinx.dnq.*
 import kotlinx.dnq.store.container.StaticStoreContainer
-import kotlinx.dnq.xdRequiredLongProp
-import kotlinx.dnq.xdRequiredStringProp
 import java.io.File
 
 
@@ -20,8 +17,20 @@ class XdMinithumbnail(entity: Entity) : XdEntity(entity) {
     var md5 by xdRequiredStringProp()
 }
 
-class XdAddedChat(entity: Entity) : XdEntity(entity) {
-    companion object : XdNaturalEntityType<XdAddedChat>()
+class XdChat(entity: Entity) : XdEntity(entity) {
+    companion object : XdNaturalEntityType<XdChat>()
 
-    var chatId by xdRequiredLongProp()
+    var chatId by xdRequiredLongProp(unique = true)
+    var title by xdRequiredStringProp()
+    var state by xdLink1(XdChatState)
+}
+
+class XdChatState(entity: Entity) : XdEnumEntity(entity) {
+    companion object : XdEnumEntityType<XdChatState>() {
+        val BANNED by enumField { title = "BANNED" }
+        val FAVORITE by enumField { title = "FAVORITE" }
+        val NONE by enumField { title = "NONE" }
+    }
+
+    var title by xdRequiredStringProp(unique = true)
 }

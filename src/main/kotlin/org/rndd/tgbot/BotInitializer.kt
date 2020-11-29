@@ -14,6 +14,8 @@ val bot = bot {
         forwardFromProxy()
         getMyChatId()
         addChannel()
+        getNonAddedChannels()
+        getAddedChannels()
     }
 }
 

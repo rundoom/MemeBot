@@ -135,32 +135,46 @@ private val TdApi.UpdateNewMessage.minithumbnailMd5: String?
 
 private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
     val minithumbnailMd5 = result.minithumbnailMd5 ?: return
+    val forwardChatId = (result.message.forwardInfo.origin as TdApi.MessageForwardOriginChannel).chatId
 
-    val isExists = xodusStore.transactional {
-        XdMinithumbnail.filter { it.md5 eq minithumbnailMd5 }
+    xodusStore.transactional {
+        val isPostExists = XdMinithumbnail.filter { it.md5 eq minithumbnailMd5 }
             .firstOrNull()
             .let { it != null }
-    }
 
-    if (
-        result.message.chatId in config.channelsToMonitor
-        && result.message.content !is TdApi.MessageText
-        && result.message.replyMarkup == null
-        && !result.isHavingUrl
-        && !isExists
-    ) {
-        val forwardMessages = TdApi.ForwardMessages(
-            config.proxyChannelId,
-            result.message.chatId,
-            longArrayOf(result.message.id),
-            null,
-            false,
-            false
-        )
+        val isFav = XdChat.filter { it.chatId eq result.message.chatId }
+            .firstOrNull()
+            .let { it != null }
 
-        client?.send(forwardMessages, defaultHandler)
+        val isOriginAdded = XdChat.filter { it.chatId eq forwardChatId }
+            .firstOrNull()
+            .let { it != null }
 
-        xodusStore.transactional {
+        if (!isOriginAdded) {
+            client?.send(TdApi.GetChat(forwardChatId)) { res ->
+                res as TdApi.Chat
+                xodusStore.transactional {
+                    XdChat.new {
+                        title = res.title
+                        chatId = res.id
+                        state = XdChatState.NONE
+                    }
+                }
+            }
+        }
+
+        if (isFav && result.message.replyMarkup == null && !result.isHavingUrl && !isPostExists) {
+            val forwardMessages = TdApi.ForwardMessages(
+                config.proxyChannelId,
+                result.message.chatId,
+                longArrayOf(result.message.id),
+                null,
+                false,
+                false
+            )
+
+            client?.send(forwardMessages, defaultHandler)
+
             XdMinithumbnail.new { md5 = minithumbnailMd5 }
         }
     }
