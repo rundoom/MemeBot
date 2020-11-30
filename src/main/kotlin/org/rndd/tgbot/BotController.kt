@@ -22,7 +22,12 @@ fun Dispatcher.getMyChatId() = command("my_chat_id") { bot, update ->
 }
 
 fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) { bot, update ->
-    bot.forwardMessage(config.mainChannelId, config.personalChatId, update.message!!.messageId)
+    val isMedia = update.message?.video != null
+            || update.message?.photo != null
+            || update.message?.animation != null
+            || update.message?.sticker != null
+
+    if (isMedia) bot.forwardMessage(config.mainChannelId, config.personalChatId, update.message!!.messageId)
 }
 
 fun Dispatcher.addChannel() = command("add_channel") { bot, update ->

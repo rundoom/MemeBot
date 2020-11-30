@@ -1,5 +1,8 @@
 package org.rndd
 
+import kotlinx.dnq.XdEntity
+import kotlinx.dnq.XdEntityType
+import kotlinx.dnq.query.*
 import org.rndd.tgcore.currentPrompt
 import java.io.BufferedReader
 import java.io.File
@@ -31,3 +34,8 @@ val File.md5 get() = BigInteger(1, MessageDigest.getInstance("MD5").digest(readB
 val ByteArray.md5 get() = BigInteger(1, MessageDigest.getInstance("MD5").digest(this)).toString(16).padStart(32, '0')
 
 val newLine = System.getProperty("line.separator") ?: "\r\n"
+
+@DnqFilterDsl
+fun <T : XdEntity> XdEntityType<T>.anyExists(clause: FilteringContext.(T) -> XdSearchingNode): Boolean {
+    return filter(clause).firstOrNull() != null
+}

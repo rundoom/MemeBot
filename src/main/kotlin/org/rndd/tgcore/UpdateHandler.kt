@@ -134,23 +134,17 @@ private val TdApi.UpdateNewMessage.minithumbnailMd5: String?
     }
 
 private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
-    val minithumbnailMd5 = result.minithumbnailMd5 ?: return
-    val forwardChatId = (result.message.forwardInfo.origin as TdApi.MessageForwardOriginChannel).chatId
+    val minithumbnailMd5 = result.minithumbnailMd5
+    if (minithumbnailMd5 == null && result.message.content !is TdApi.MessageSticker) return
+
+    val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
 
     xodusStore.transactional {
-        val isPostExists = XdMinithumbnail.filter { it.md5 eq minithumbnailMd5 }
-            .firstOrNull()
-            .let { it != null }
+        val isPostExists = XdMinithumbnail.anyExists { it.md5 eq minithumbnailMd5 }
+        val isFav = XdChat.anyExists { it.chatId eq result.message.chatId }
+        val isOriginAdded = XdChat.anyExists { it.chatId eq forwardChatId }
 
-        val isFav = XdChat.filter { it.chatId eq result.message.chatId }
-            .firstOrNull()
-            .let { it != null }
-
-        val isOriginAdded = XdChat.filter { it.chatId eq forwardChatId }
-            .firstOrNull()
-            .let { it != null }
-
-        if (!isOriginAdded) {
+        if (!isOriginAdded && forwardChatId != null) {
             client?.send(TdApi.GetChat(forwardChatId)) { res ->
                 res as TdApi.Chat
                 xodusStore.transactional {
@@ -175,7 +169,7 @@ private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
 
             client?.send(forwardMessages, defaultHandler)
 
-            XdMinithumbnail.new { md5 = minithumbnailMd5 }
+            if (minithumbnailMd5 != null) XdMinithumbnail.new { md5 = minithumbnailMd5 }
         }
     }
 }
