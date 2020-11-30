@@ -137,11 +137,12 @@ private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
     val minithumbnailMd5 = result.minithumbnailMd5
     if (minithumbnailMd5 == null && result.message.content !is TdApi.MessageSticker) return
 
-    val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
-
     xodusStore.transactional {
-        val isPostExists = XdMinithumbnail.anyExists { it.md5 eq minithumbnailMd5 }
         val isFav = XdChat.anyExists { it.chatId eq result.message.chatId }
+        if(!isFav) return@transactional
+
+        val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
+        val isPostExists = XdMinithumbnail.anyExists { it.md5 eq minithumbnailMd5 }
         val isOriginAdded = XdChat.anyExists { it.chatId eq forwardChatId }
 
         if (!isOriginAdded && forwardChatId != null) {
