@@ -24,5 +24,6 @@ data class Config(
     @SerializedName("main_channel_id") val mainChannelId: Long,
     @SerializedName("proxy_channel_id") val proxyChannelId: Long,
     @SerializedName("personal_chat_id") val personalChatId: Long,
-    @SerializedName("phone_number") val phoneNumber: String
+    @SerializedName("phone_number") val phoneNumber: String,
+    @SerializedName("db_source_dir") val dbSourceDir: String
 )

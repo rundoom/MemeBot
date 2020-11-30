@@ -7,7 +7,7 @@ import java.io.File
 
 
 val xodusStore = StaticStoreContainer.init(
-    dbFolder = File("database"),
+    dbFolder = File(config.dbSourceDir),
     environmentName = "meme_bot_db"
 )
 

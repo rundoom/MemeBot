@@ -37,10 +37,10 @@ shadowJar {
         attributes "Main-Class": "org.rndd.MainKt"
     }
 
-    copy {
-        from 'config.json'
-        into "${libsDir.path}"
-    }
+//    copy {
+//        from 'config.json'
+//        into "${libsDir.path}"
+//    }
 
     copy {
         from 'Win10'

@@ -1,14 +1,12 @@
 package org.rndd.tgbot
 
 import com.github.kotlintelegrambot.dispatcher.Dispatcher
-import com.github.kotlintelegrambot.dispatcher.channel
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.extensions.filters.Filter
 import kotlinx.dnq.creator.findOrNew
 import kotlinx.dnq.query.asIterable
 import kotlinx.dnq.query.filter
-import kotlinx.dnq.query.sortedBy
 import org.drinkless.tdlib.TdApi
 import org.rndd.XdChat
 import org.rndd.XdChatState
@@ -37,37 +35,61 @@ fun Dispatcher.addChannel() = command("add_channel") { bot, update ->
         return@command
     }
 
-    client?.send(TdApi.GetChat(channelId)) { res ->
+    changeChannelState(channelId, XdChatState.FAVORITE)
+}
+
+fun Dispatcher.banChannel() = command("ban_channel") { bot, update ->
+    val channelId = update.message?.text?.substringAfter("/ban_channel ")?.toLong()
+    if (channelId == null) {
+        bot.sendMessage(chatId = update.message!!.chat.id, text = "error adding channel")
+        return@command
+    }
+
+    changeChannelState(channelId, XdChatState.BANNED)
+}
+
+fun Dispatcher.getNonAddedChannels() = command("get_non_added_channels") { bot, update ->
+    xodusStore.transactional {
+        getChannelsStrList(XdChatState.NONE).chunked(50) {
+            bot.sendMessage(chatId = update.message!!.chat.id, text = it.joinToString("\r\n"))
+        }
+    }
+}
+
+fun Dispatcher.getBannedChannels() = command("get_banned_channels") { bot, update ->
+    xodusStore.transactional {
+        getChannelsStrList(XdChatState.BANNED).chunked(50) {
+            bot.sendMessage(chatId = update.message!!.chat.id, text = it.joinToString("\r\n"))
+        }
+    }
+}
+
+fun Dispatcher.getAddedChannels() = command("get_added_channels") { bot, update ->
+    xodusStore.transactional {
+        getChannelsStrList(XdChatState.FAVORITE).chunked(50) {
+            bot.sendMessage(chatId = update.message!!.chat.id, text = it.joinToString("\r\n"))
+        }
+    }
+}
+
+private fun getChannelsStrList(state: XdChatState): List<String> {
+    return XdChat.filter {
+        it.state eq state
+    }.asIterable().map {
+        "${it.chatId}; ${it.title}"
+    }
+}
+
+private fun changeChannelState(id: Long, state: XdChatState) {
+    client?.send(TdApi.GetChat(id)) { res ->
         res as TdApi.Chat
         xodusStore.transactional {
             XdChat.findOrNew {
                 chatId = res.id
             }.also {
                 it.title = res.title
-                it.state = XdChatState.FAVORITE
+                it.state = state
             }
         }
-    }
-}
-
-fun Dispatcher.getNonAddedChannels() = command("get_non_added_channels") { bot, update ->
-    xodusStore.transactional {
-        val chatsList = XdChat.filter {
-            it.state ne XdChatState.FAVORITE
-        }.asIterable().joinToString("\r\n") {
-            "${it.chatId}; ${it.title}"
-        }
-        bot.sendMessage(chatId = update.message!!.chat.id, text = chatsList)
-    }
-}
-
-fun Dispatcher.getAddedChannels() = command("get_added_channels") { bot, update ->
-    xodusStore.transactional {
-        val chatsList = XdChat.filter {
-            it.state eq XdChatState.FAVORITE
-        }.asIterable().joinToString("\r\n") {
-            "${it.chatId}; ${it.title}"
-        }
-        bot.sendMessage(chatId = update.message!!.chat.id, text = chatsList)
     }
 }
