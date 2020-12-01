@@ -46,6 +46,9 @@ val superGroupsFullInfo: ConcurrentMap<Int, TdApi.SupergroupFullInfo> = Concurre
 const val commandsLine = "Enter command (gcs - GetChats, me - GetMe, lo - LogOut, q - Quit): "
 
 fun initTgCore() {
+    System.load(File("Win10\\libcrypto-1_1-x64.dll").absolutePath)
+    System.load(File("Win10\\libssl-1_1-x64.dll").absolutePath)
+    System.load(File("Win10\\zlib1.dll").absolutePath)
     System.load(File("Win10\\tdjni.dll").absolutePath)
     Client.execute(TdApi.SetLogVerbosityLevel(0))
     if (Client.execute(TdApi.SetLogStream(TdApi.LogStreamFile("tdlib.log", 1 shl 27, false))) is Error) {
