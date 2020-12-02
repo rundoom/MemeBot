@@ -35,7 +35,10 @@ fun Dispatcher.addChannel() = command("add_channel") { bot, update ->
         return@command
     }
 
-    changeChannelState(channelId, XdChatState.FAVORITE)
+    client?.send(TdApi.GetChat(channelId)) { res ->
+        res as TdApi.Chat
+        changeChannelState(res, XdChatState.FAVORITE)
+    }
 }
 
 fun Dispatcher.banChannel() = command("ban_channel") { bot, update ->
@@ -45,7 +48,10 @@ fun Dispatcher.banChannel() = command("ban_channel") { bot, update ->
         return@command
     }
 
-    changeChannelState(channelId, XdChatState.BANNED)
+    client?.send(TdApi.GetChat(channelId)) { res ->
+        res as TdApi.Chat
+        changeChannelState(res, XdChatState.BANNED)
+    }
 }
 
 fun Dispatcher.getNonAddedChannels() = command("get_non_added_channels") { bot, update ->
@@ -80,16 +86,13 @@ private fun getChannelsStrList(state: XdChatState): List<String> {
     }
 }
 
-private fun changeChannelState(id: Long, state: XdChatState) {
-    client?.send(TdApi.GetChat(id)) { res ->
-        res as TdApi.Chat
-        xodusStore.transactional {
-            XdChat.findOrNew {
-                chatId = res.id
-            }.also {
-                it.title = res.title
-                it.state = state
-            }
+private fun changeChannelState(chat: TdApi.Chat, state: XdChatState) {
+    xodusStore.transactional {
+        XdChat.findOrNew {
+            chatId = chat.id
+        }.also {
+            it.title = chat.title
+            it.state = state
         }
     }
 }
