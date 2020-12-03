@@ -125,6 +125,10 @@ private val TdApi.UpdateNewMessage.isHavingUrl
         formattedText.entities.any { it.type is TdApi.TextEntityTypeTextUrl || it.type is TdApi.TextEntityTypeUrl }
     } ?: false
 
+private val TdApi.UpdateNewMessage.isHavingInlineButtonUrl
+    get() = message.replyMarkup?.let { it as TdApi.ReplyMarkupInlineKeyboard }?.rows?.flatMap { it.asIterable() }
+        ?.any { it.type is TdApi.InlineKeyboardButtonTypeUrl } ?: false
+
 private val TdApi.UpdateNewMessage.minithumbnailMd5: String?
     get() = when (val content = message.content) {
         is TdApi.MessagePhoto -> content.photo.minithumbnail.data.md5
@@ -166,7 +170,7 @@ private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
             }
         }
 
-        if (isFav && result.message.replyMarkup == null && !result.isHavingUrl && !isPostExists) {
+        if (isFav && !result.isHavingInlineButtonUrl && !result.isHavingUrl && !isPostExists) {
             val forwardMessages = TdApi.ForwardMessages(
                 config.proxyChannelId,
                 result.message.chatId,
