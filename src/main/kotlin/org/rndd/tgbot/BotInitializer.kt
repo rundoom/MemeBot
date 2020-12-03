@@ -19,6 +19,7 @@ val bot = bot {
         banChannel()
         getBannedChannels()
         getChatInfo()
+        getMainChatList()
     }
 }
 

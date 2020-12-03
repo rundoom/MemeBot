@@ -17,6 +17,7 @@ import org.rndd.config
 import org.rndd.tgbot.ChatStatusCommand.*
 import org.rndd.tgcore.client
 import org.rndd.tgcore.defaultHandler
+import org.rndd.tgcore.mainChatList
 import org.rndd.xodusStore
 import java.io.File
 
@@ -82,6 +83,14 @@ fun Dispatcher.getAddedChannels() = command("get_added_channels") { bot, update 
     xodusStore.transactional {
         getChannelsIdsByState(XdChatState.FAVORITE).forEach { chatId ->
             sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id, XdChatState.FAVORITE.title)
+        }
+    }
+}
+
+fun Dispatcher.getMainChatList() = command("get_main_chat_list") { bot, update ->
+    xodusStore.transactional {
+        mainChatList.filter { it.chatId < 0 }.map { it.chatId }.forEach { chatId ->
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id, "MAIN")
         }
     }
 }
