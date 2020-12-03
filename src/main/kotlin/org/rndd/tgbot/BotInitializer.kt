@@ -18,6 +18,7 @@ val bot = bot {
         getAddedChannels()
         banChannel()
         getBannedChannels()
+        getChatInfo()
     }
 }
 

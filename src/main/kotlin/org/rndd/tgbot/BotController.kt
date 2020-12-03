@@ -1,8 +1,11 @@
 package org.rndd.tgbot
 
 import com.github.kotlintelegrambot.dispatcher.Dispatcher
+import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.entities.InlineKeyboardButton
+import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.extensions.filters.Filter
 import kotlinx.dnq.creator.findOrNew
 import kotlinx.dnq.query.asIterable
@@ -11,8 +14,11 @@ import org.drinkless.tdlib.TdApi
 import org.rndd.XdChat
 import org.rndd.XdChatState
 import org.rndd.config
+import org.rndd.tgbot.ChatStatusCommand.*
 import org.rndd.tgcore.client
+import org.rndd.tgcore.defaultHandler
 import org.rndd.xodusStore
+import java.io.File
 
 
 fun Dispatcher.getMyChatId() = command("my_chat_id") { bot, update ->
@@ -28,62 +34,62 @@ fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) 
     if (isMedia) bot.forwardMessage(config.mainChannelId, config.personalChatId, update.message!!.messageId)
 }
 
-fun Dispatcher.addChannel() = command("add_channel") { bot, update ->
-    val channelId = update.message?.text?.substringAfter("/add_channel ")?.toLong()
+fun Dispatcher.getChatInfo() = command("get_chat_info") { bot, update ->
+    val channelId = update.message?.text?.substringAfter("/get_chat_info ")?.toLong()
     if (channelId == null) {
-        bot.sendMessage(chatId = update.message!!.chat.id, text = "error adding channel")
+        bot.sendMessage(chatId = update.message!!.chat.id, text = "error getting info")
         return@command
-    }
-
-    client?.send(TdApi.GetChat(channelId)) { res ->
-        res as TdApi.Chat
-        changeChannelState(res, XdChatState.FAVORITE)
     }
 }
 
-fun Dispatcher.banChannel() = command("ban_channel") { bot, update ->
-    val channelId = update.message?.text?.substringAfter("/ban_channel ")?.toLong()
-    if (channelId == null) {
-        bot.sendMessage(chatId = update.message!!.chat.id, text = "error adding channel")
-        return@command
-    }
-
-    client?.send(TdApi.GetChat(channelId)) { res ->
-        res as TdApi.Chat
-        changeChannelState(res, XdChatState.BANNED)
+private fun sendChannelLinksByGroupsIdsToChat(channelId: Long, chatToSend: Long) {
+    client?.send(TdApi.GetChat(channelId)) { chat ->
+        chat as TdApi.Chat
+        val type = chat.type
+        if (type is TdApi.ChatTypeSupergroup) {
+            type.supergroupId
+            client?.send(TdApi.GetSupergroup(type.supergroupId)) { supergroup ->
+                supergroup as TdApi.Supergroup
+                bot.sendMessage(
+                    chatId = chatToSend,
+                    text = "https://t.me/${supergroup.username}\r\n${chat.id}",
+                    replyMarkup = generateMarkupForChat(channelId)
+                )
+            }
+        }
     }
 }
 
 fun Dispatcher.getNonAddedChannels() = command("get_non_added_channels") { bot, update ->
     xodusStore.transactional {
-        getChannelsStrList(XdChatState.NONE).chunked(50) {
-            bot.sendMessage(chatId = update.message!!.chat.id, text = it.joinToString("\r\n"))
+        getChannelsIdsByState(XdChatState.NONE).forEach { chatId ->
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id)
         }
     }
 }
 
 fun Dispatcher.getBannedChannels() = command("get_banned_channels") { bot, update ->
     xodusStore.transactional {
-        getChannelsStrList(XdChatState.BANNED).chunked(50) {
-            bot.sendMessage(chatId = update.message!!.chat.id, text = it.joinToString("\r\n"))
+        getChannelsIdsByState(XdChatState.BANNED).forEach { chatId ->
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id)
         }
     }
 }
 
 fun Dispatcher.getAddedChannels() = command("get_added_channels") { bot, update ->
     xodusStore.transactional {
-        getChannelsStrList(XdChatState.FAVORITE).chunked(50) {
-            bot.sendMessage(chatId = update.message!!.chat.id, text = it.joinToString("\r\n"))
+        getChannelsIdsByState(XdChatState.BANNED).forEach { chatId ->
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id)
         }
     }
 }
 
-private fun getChannelsStrList(state: XdChatState): List<String> {
+private fun getChannelsIdsByState(state: XdChatState): List<Long> {
     return XdChat.filter {
         it.state eq state
     }.asIterable().map {
-        "${it.chatId}; ${it.title}"
-    }
+        it.chatId
+    }.toList()
 }
 
 private fun changeChannelState(chat: TdApi.Chat, state: XdChatState) {
@@ -95,4 +101,58 @@ private fun changeChannelState(chat: TdApi.Chat, state: XdChatState) {
             it.state = state
         }
     }
+}
+
+fun Dispatcher.addChannel() = callbackQuery(ADD_CHAT.prefix) { bot, update ->
+    val chatId = update.callbackQuery!!.data.substringAfter(ADD_CHAT.prefix).toLong()
+
+    client?.send(TdApi.GetChat(chatId)) { res ->
+        res as TdApi.Chat
+        xodusStore.transactional {
+            changeChannelState(res, XdChatState.FAVORITE)
+        }
+
+        client?.send(TdApi.JoinChat(res.id), defaultHandler)
+    }
+
+    bot.deleteMessage(
+        update.callbackQuery?.message?.chat!!.id,
+        update.callbackQuery?.message!!.messageId
+    )
+}
+
+fun Dispatcher.banChannel() = callbackQuery(BAN_CHAT.prefix) { bot, update ->
+    val chatId = update.callbackQuery!!.data.substringAfter(BAN_CHAT.prefix).toLong()
+
+    client?.send(TdApi.GetChat(chatId)) { res ->
+        res as TdApi.Chat
+        xodusStore.transactional {
+            changeChannelState(res, XdChatState.BANNED)
+        }
+    }
+
+    bot.deleteMessage(
+        update.callbackQuery?.message?.chat!!.id,
+        update.callbackQuery?.message!!.messageId
+    )
+}
+
+private fun generateMarkupForChat(chatId: Long) = InlineKeyboardMarkup(
+    listOf(
+        listOf(
+            InlineKeyboardButton(
+                text = "Ban",
+                callbackData = "${BAN_CHAT.prefix}${chatId}"
+            ),
+            InlineKeyboardButton(
+                text = "Add",
+                callbackData = "${ADD_CHAT.prefix}${chatId}"
+            )
+        )
+    )
+)
+
+private enum class ChatStatusCommand(val prefix: String) {
+    BAN_CHAT("BAN_CHAT_"),
+    ADD_CHAT("ADD_CHAT_")
 }
