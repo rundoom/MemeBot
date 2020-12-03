@@ -17,6 +17,12 @@ class XdMinithumbnail(entity: Entity) : XdEntity(entity) {
     var md5 by xdRequiredStringProp()
 }
 
+class XdSticker(entity: Entity) : XdEntity(entity) {
+    companion object : XdNaturalEntityType<XdSticker>()
+
+    var setId by xdRequiredLongProp()
+}
+
 class XdChat(entity: Entity) : XdEntity(entity) {
     companion object : XdNaturalEntityType<XdChat>()
 

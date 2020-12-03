@@ -8,7 +8,7 @@ import kotlin.concurrent.thread
 
 
 fun main() {
-    XdModel.registerNodes(XdMinithumbnail, XdChat, XdChatState)
+    XdModel.registerNodes(XdMinithumbnail, XdChat, XdChatState, XdSticker)
     initMetaData(XdModel.hierarchy, xodusStore)
 
     thread { initTelegramBot() }

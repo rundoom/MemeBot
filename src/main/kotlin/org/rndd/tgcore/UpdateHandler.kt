@@ -135,14 +135,22 @@ private val TdApi.UpdateNewMessage.minithumbnailMd5: String?
 
 private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
     val minithumbnailMd5 = result.minithumbnailMd5
-    if (minithumbnailMd5 == null && result.message.content !is TdApi.MessageSticker) return
+    val isSticker = result.message.content is TdApi.MessageSticker
+
+    if (minithumbnailMd5 == null && !isSticker) return
 
     xodusStore.transactional {
         val isFav = XdChat.anyExists { it.chatId eq result.message.chatId }
-        if(!isFav) return@transactional
+        if (!isFav) return@transactional
 
         val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
-        val isPostExists = XdMinithumbnail.anyExists { it.md5 eq minithumbnailMd5 }
+
+        val isPostExists = if (!isSticker) {
+            XdMinithumbnail.anyExists { it.md5 eq minithumbnailMd5 }
+        } else {
+            XdSticker.anyExists { it.setId eq (result.message.content as TdApi.MessageSticker).sticker.setId }
+        }
+
         val isOriginAdded = XdChat.anyExists { it.chatId eq forwardChatId }
 
         if (!isOriginAdded && forwardChatId != null) {
@@ -170,7 +178,11 @@ private fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
 
             client?.send(forwardMessages, defaultHandler)
 
-            if (minithumbnailMd5 != null) XdMinithumbnail.new { md5 = minithumbnailMd5 }
+            if (!isSticker) {
+                if (minithumbnailMd5 != null) XdMinithumbnail.new { md5 = minithumbnailMd5 }
+            } else {
+                XdSticker.new { setId = (result.message.content as TdApi.MessageSticker).sticker.setId }
+            }
         }
     }
 }

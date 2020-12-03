@@ -29,9 +29,11 @@ fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) 
     val isMedia = update.message?.video != null
             || update.message?.photo != null
             || update.message?.animation != null
-            || update.message?.sticker != null
+
+    val isSticker = update.message?.sticker != null
 
     if (isMedia) bot.forwardMessage(config.mainChannelId, config.personalChatId, update.message!!.messageId)
+    if (isSticker) bot.forwardMessage(config.stickerChannelId, config.personalChatId, update.message!!.messageId)
 }
 
 fun Dispatcher.getChatInfo() = command("get_chat_info") { bot, update ->
