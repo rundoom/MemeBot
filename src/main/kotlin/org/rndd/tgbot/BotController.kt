@@ -42,7 +42,7 @@ fun Dispatcher.getChatInfo() = command("get_chat_info") { bot, update ->
     }
 }
 
-private fun sendChannelLinksByGroupsIdsToChat(channelId: Long, chatToSend: Long) {
+private fun sendChannelLinksByGroupsIdsToChat(channelId: Long, chatToSend: Long, status: String) {
     client?.send(TdApi.GetChat(channelId)) { chat ->
         chat as TdApi.Chat
         val type = chat.type
@@ -52,7 +52,7 @@ private fun sendChannelLinksByGroupsIdsToChat(channelId: Long, chatToSend: Long)
                 supergroup as TdApi.Supergroup
                 bot.sendMessage(
                     chatId = chatToSend,
-                    text = "https://t.me/${supergroup.username}\r\n${chat.id}",
+                    text = "https://t.me/${supergroup.username}\r\n${chat.id} $status",
                     replyMarkup = generateMarkupForChat(channelId)
                 )
             }
@@ -63,7 +63,7 @@ private fun sendChannelLinksByGroupsIdsToChat(channelId: Long, chatToSend: Long)
 fun Dispatcher.getNonAddedChannels() = command("get_non_added_channels") { bot, update ->
     xodusStore.transactional {
         getChannelsIdsByState(XdChatState.NONE).forEach { chatId ->
-            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id)
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id, XdChatState.NONE.title)
         }
     }
 }
@@ -71,15 +71,15 @@ fun Dispatcher.getNonAddedChannels() = command("get_non_added_channels") { bot, 
 fun Dispatcher.getBannedChannels() = command("get_banned_channels") { bot, update ->
     xodusStore.transactional {
         getChannelsIdsByState(XdChatState.BANNED).forEach { chatId ->
-            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id)
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id, XdChatState.BANNED.title)
         }
     }
 }
 
 fun Dispatcher.getAddedChannels() = command("get_added_channels") { bot, update ->
     xodusStore.transactional {
-        getChannelsIdsByState(XdChatState.BANNED).forEach { chatId ->
-            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id)
+        getChannelsIdsByState(XdChatState.FAVORITE).forEach { chatId ->
+            sendChannelLinksByGroupsIdsToChat(chatId, update.message!!.chat.id, XdChatState.FAVORITE.title)
         }
     }
 }
