@@ -3,6 +3,10 @@ package org.rndd.tgcore
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
 import org.rndd.*
+import org.rndd.tgcore.handler.AuthorizationRequestHandler
+import org.rndd.tgcore.handler.DefaultExceptionHandler
+import org.rndd.tgcore.handler.DefaultHandler
+import org.rndd.tgcore.handler.UpdateHandler
 import java.io.File
 import java.io.IOError
 import java.io.IOException

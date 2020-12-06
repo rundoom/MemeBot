@@ -1,8 +1,9 @@
-package org.rndd.tgcore
+package org.rndd.tgcore.handler
 
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
 import org.rndd.newLine
+import org.rndd.tgcore.onAuthorizationStateUpdated
 
 
 class DefaultExceptionHandler : Client.ExceptionHandler {
@@ -10,7 +11,7 @@ class DefaultExceptionHandler : Client.ExceptionHandler {
 }
 
 class DefaultHandler : Client.ResultHandler {
-    override fun onResult(result: TdApi.Object) = println(result)
+    override fun onResult(result: TdApi.Object) {}
 }
 
 class AuthorizationRequestHandler : Client.ResultHandler {
