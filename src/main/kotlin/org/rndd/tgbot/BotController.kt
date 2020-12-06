@@ -8,6 +8,7 @@ import com.github.kotlintelegrambot.entities.InlineKeyboardButton
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.extensions.filters.Filter
 import kotlinx.dnq.creator.findOrNew
+import kotlinx.dnq.query.FilteringContext.eq
 import kotlinx.dnq.query.asIterable
 import kotlinx.dnq.query.filter
 import org.drinkless.tdlib.TdApi
@@ -19,11 +20,22 @@ import org.rndd.tgcore.client
 import org.rndd.tgcore.defaultHandler
 import org.rndd.tgcore.mainChatList
 import org.rndd.xodusStore
-import java.io.File
 
 
 fun Dispatcher.getMyChatId() = command("my_chat_id") { bot, update ->
     bot.sendMessage(chatId = update.message!!.chat.id, text = update.message!!.chat.id.toString())
+}
+
+fun Dispatcher.getStats() = command("get_stats") { bot, update ->
+    val message = xodusStore.transactional {
+        val noneCount = XdChat.filter { it.state eq XdChatState.NONE }.entityIterable.count()
+        val addedCount = XdChat.filter { it.state eq XdChatState.FAVORITE }.entityIterable.count()
+        val bannedCont = XdChat.filter { it.state eq XdChatState.BANNED }.entityIterable.count()
+
+        "None count: $noneCount\r\nAdded count: $addedCount\r\nBanned cont: $bannedCont"
+    }
+
+    bot.sendMessage(update.message!!.chat.id, message)
 }
 
 fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) { bot, update ->
@@ -37,11 +49,34 @@ fun Dispatcher.forwardFromProxy() = message(Filter.Chat(config.personalChatId)) 
     if (isSticker) bot.forwardMessage(config.stickerChannelId, config.personalChatId, update.message!!.messageId)
 }
 
-fun Dispatcher.getChatInfo() = command("get_chat_info") { bot, update ->
-    val channelId = update.message?.text?.substringAfter("/get_chat_info ")?.toLong()
-    if (channelId == null) {
+fun Dispatcher.getChatInfo() = command("get_chat") { bot, update ->
+    val channelNamePart = update.message?.text?.substringAfter("/get_chat ")
+    if (channelNamePart.isNullOrEmpty()) {
         bot.sendMessage(chatId = update.message!!.chat.id, text = "error getting info")
         return@command
+    }
+
+    xodusStore.transactional {
+        val filteredChats = XdChat.all().asIterable().filter { channelNamePart.toLowerCase() in it.title.toLowerCase() }
+        filteredChats.forEach { xdChat ->
+            val chatId = xdChat.chatId
+            val state = xdChat.state.title
+            client?.send(TdApi.GetChat(chatId)) { chat ->
+                chat as TdApi.Chat
+                val type = chat.type
+                if (type is TdApi.ChatTypeSupergroup) {
+                    type.supergroupId
+                    client?.send(TdApi.GetSupergroup(type.supergroupId)) { supergroup ->
+                        supergroup as TdApi.Supergroup
+                        bot.sendMessage(
+                            chatId = update.message!!.chat.id,
+                            text = "https://t.me/${supergroup.username}\r\n${chat.id} $state",
+                            replyMarkup = generateMarkupForChat(chatId)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
