@@ -36,38 +36,50 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
 
         val isOriginAdded = XdChat.anyExists { it.chatId eq forwardChatId }
 
-        if (!isOriginAdded && forwardChatId != null) {
-            client?.send(TdApi.GetChat(forwardChatId)) { res ->
-                res as TdApi.Chat
-                xodusStore.transactional {
-                    XdChat.new {
-                        title = res.title
-                        chatId = res.id
-                        state = XdChatState.NONE
-                    }
-                }
-            }
-        }
+        if (!isOriginAdded && forwardChatId != null) saveNewChatFromForward(forwardChatId)
 
         if (!result.isHavingInlineButtonUrl && !result.isHavingUrl && !isPostExists) {
-            val forwardMessages = TdApi.ForwardMessages(
-                config.proxyChannelId,
-                result.message.chatId,
-                longArrayOf(result.message.id),
-                null,
-                false,
-                false
-            )
-
-            client?.send(forwardMessages, defaultHandler)
+            forwardMessageToProxyBot(result.message.chatId, result.message.id)
 
             if (!isSticker) {
-                if (minithumbnailMd5 != null) XdMinithumbnail.new { md5 = minithumbnailMd5 }
+                if (minithumbnailMd5 != null) {
+                    XdMinithumbnail.new {
+                        md5 = minithumbnailMd5
+                        channelsFrom.add(result.message.chatId)
+                        forwardChatId?.let { channelsFrom.add(it) }
+                    }
+                }
             } else {
                 XdSticker.new { setId = (result.message.content as TdApi.MessageSticker).sticker.setId }
             }
         }
     }
+}
+
+private fun saveNewChatFromForward(forwardChatId: Long) {
+    client?.send(TdApi.GetChat(forwardChatId)) { res ->
+        res as TdApi.Chat
+        xodusStore.transactional {
+            XdChat.new {
+                title = res.title
+                chatId = res.id
+                state = XdChatState.NONE
+            }
+        }
+    }
+}
+
+private fun forwardMessageToProxyBot(chatId: Long, messageId: Long) {
+    val forwardMessages = TdApi.ForwardMessages(
+        config.proxyChannelId,
+        chatId,
+        longArrayOf(messageId),
+        null,
+        false,
+        false
+    )
+
+    client?.send(forwardMessages, defaultHandler)
 }
 
 private val TdApi.UpdateNewMessage.isHavingUrl
