@@ -39,3 +39,7 @@ val newLine = System.getProperty("line.separator") ?: "\r\n"
 fun <T : XdEntity> XdEntityType<T>.anyExists(clause: FilteringContext.(T) -> XdSearchingNode): Boolean {
     return filter(clause).firstOrNull() != null
 }
+
+fun <T> List<T>.takeFirstAndLast(first: Int, last: Int = first): List<T> {
+    return if (first + last >= size) toList() else take(first) + takeLast(last)
+}

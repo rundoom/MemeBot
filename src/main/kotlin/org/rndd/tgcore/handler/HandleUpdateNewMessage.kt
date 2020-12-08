@@ -1,5 +1,7 @@
 package org.rndd.tgcore.handler
 
+import kotlinx.dnq.query.filter
+import kotlinx.dnq.query.firstOrNull
 import org.drinkless.tdlib.TdApi
 import org.rndd.*
 import org.rndd.tgcore.client
@@ -16,11 +18,18 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
         if (!isFav) return@transactional
 
         val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
+
         val isBanned = XdChat.anyExists { (it.state eq XdChatState.BANNED) and (it.chatId eq forwardChatId) }
         if (isBanned) return@transactional
 
+        val thumbnail = XdMinithumbnail.filter { it.md5 eq minithumbnailMd5 }.firstOrNull()
+            ?.also { thumbnail ->
+                thumbnail.channelsFrom.add(result.message.chatId)
+                forwardChatId?.let { thumbnail.channelsFrom.add(it) }
+            }
+
         val isPostExists = if (!isSticker) {
-            XdMinithumbnail.anyExists { it.md5 eq minithumbnailMd5 }
+            thumbnail != null
         } else {
             XdSticker.anyExists { it.setId eq (result.message.content as TdApi.MessageSticker).sticker.setId }
         }

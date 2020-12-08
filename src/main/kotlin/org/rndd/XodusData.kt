@@ -15,6 +15,7 @@ class XdMinithumbnail(entity: Entity) : XdEntity(entity) {
     companion object : XdNaturalEntityType<XdMinithumbnail>()
 
     var md5 by xdRequiredStringProp()
+    val channelsFrom by xdMutableSetProp<XdMinithumbnail, Long>()
 }
 
 class XdSticker(entity: Entity) : XdEntity(entity) {

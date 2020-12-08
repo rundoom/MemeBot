@@ -12,14 +12,11 @@ import kotlinx.dnq.query.FilteringContext.eq
 import kotlinx.dnq.query.asIterable
 import kotlinx.dnq.query.filter
 import org.drinkless.tdlib.TdApi
-import org.rndd.XdChat
-import org.rndd.XdChatState
-import org.rndd.config
+import org.rndd.*
 import org.rndd.tgbot.ChatStatusCommand.*
 import org.rndd.tgcore.client
 import org.rndd.tgcore.defaultHandler
 import org.rndd.tgcore.mainChatList
-import org.rndd.xodusStore
 
 
 fun Dispatcher.getMyChatId() = command("my_chat_id") { bot, update ->
@@ -32,7 +29,15 @@ fun Dispatcher.getStats() = command("get_stats") { bot, update ->
         val addedCount = XdChat.filter { it.state eq XdChatState.FAVORITE }.entityIterable.count()
         val bannedCont = XdChat.filter { it.state eq XdChatState.BANNED }.entityIterable.count()
 
-        "None count: $noneCount\r\nAdded count: $addedCount\r\nBanned cont: $bannedCont"
+        val postsDuplicates = XdMinithumbnail.all()
+            .asIterable()
+            .groupBy { it.channelsFrom.size }
+            .entries
+            .sortedBy { it.key }
+            .takeFirstAndLast(5)
+            .joinToString("\r\n") { "${it.key} duplicates ${it.value.size} times" }
+
+        "None count: $noneCount\r\nAdded count: $addedCount\r\nBanned cont: $bannedCont\r\n$postsDuplicates"
     }
 
     bot.sendMessage(update.message!!.chat.id, message)
