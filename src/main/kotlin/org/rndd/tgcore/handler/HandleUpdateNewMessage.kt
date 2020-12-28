@@ -12,12 +12,24 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
     val isSticker = result.message.content is TdApi.MessageSticker
 
     if (minithumbnailMd5 == null && !isSticker) return
+    if (result.isHavingInlineButtonUrl || result.isHavingUrl) return
 
     xodusStore.transactional {
         val isFav = XdChat.anyExists { (it.state eq XdChatState.FAVORITE) and (it.chatId eq result.message.chatId) }
         if (!isFav) return@transactional
 
         val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
+
+        if (forwardChatId != null) {
+            val origin = result.message.forwardInfo?.origin as TdApi.MessageForwardOriginChannel
+            val messageGet = TdApi.GetMessage(origin.chatId, origin.messageId)
+            client?.send(messageGet){
+                it as TdApi.Message
+                println(it.interactionInfo.forwardCount)
+                println(it.interactionInfo.viewCount)
+                println("\r\n")
+            }
+        }
 
         val isBanned = XdChat.anyExists { (it.state eq XdChatState.BANNED) and (it.chatId eq forwardChatId) }
         if (isBanned) return@transactional
@@ -38,7 +50,12 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
 
         if (!isOriginAdded && forwardChatId != null) saveNewChatFromForward(forwardChatId)
 
-        if (!result.isHavingInlineButtonUrl && !result.isHavingUrl && !isPostExists) {
+        if (thumbnail != null && !thumbnail.isPostedToFilteredChat && thumbnail.channelsFrom.size >= 3) {
+            forwardMessageToFilteredChannel(result.message.chatId, result.message.id)
+            thumbnail.isPostedToFilteredChat = true
+        }
+
+        if (!isPostExists) {
             forwardMessageToProxyBot(result.message.chatId, result.message.id)
 
             if (!isSticker) {
@@ -49,9 +66,9 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
                         forwardChatId?.let { channelsFrom.add(it) }
                     }
                 }
-            } else {
-                XdSticker.new { setId = (result.message.content as TdApi.MessageSticker).sticker.setId }
             }
+        } else {
+            XdSticker.new { setId = (result.message.content as TdApi.MessageSticker).sticker.setId }
         }
     }
 }
@@ -72,6 +89,19 @@ private fun saveNewChatFromForward(forwardChatId: Long) {
 private fun forwardMessageToProxyBot(chatId: Long, messageId: Long) {
     val forwardMessages = TdApi.ForwardMessages(
         config.proxyChannelId,
+        chatId,
+        longArrayOf(messageId),
+        null,
+        false,
+        false
+    )
+
+    client?.send(forwardMessages, defaultHandler)
+}
+
+private fun forwardMessageToFilteredChannel(chatId: Long, messageId: Long) {
+    val forwardMessages = TdApi.ForwardMessages(
+        config.filteredChannelId,
         chatId,
         longArrayOf(messageId),
         null,

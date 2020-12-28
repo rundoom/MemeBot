@@ -16,6 +16,7 @@ class XdMinithumbnail(entity: Entity) : XdEntity(entity) {
 
     var md5 by xdRequiredStringProp()
     val channelsFrom by xdMutableSetProp<XdMinithumbnail, Long>()
+    var isPostedToFilteredChat by xdBooleanProp()
 }
 
 class XdSticker(entity: Entity) : XdEntity(entity) {
