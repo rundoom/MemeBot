@@ -20,17 +20,6 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
 
         val forwardChatId = result.message.forwardInfo?.origin?.let { it as TdApi.MessageForwardOriginChannel }?.chatId
 
-        if (forwardChatId != null) {
-            val origin = result.message.forwardInfo?.origin as TdApi.MessageForwardOriginChannel
-            val messageGet = TdApi.GetMessage(origin.chatId, origin.messageId)
-            client?.send(messageGet){
-                it as TdApi.Message
-                println(it.interactionInfo.forwardCount)
-                println(it.interactionInfo.viewCount)
-                println("\r\n")
-            }
-        }
-
         val isBanned = XdChat.anyExists { (it.state eq XdChatState.BANNED) and (it.chatId eq forwardChatId) }
         if (isBanned) return@transactional
 
@@ -55,21 +44,25 @@ fun handleUpdateNewMessage(result: TdApi.UpdateNewMessage) {
             thumbnail.isPostedToFilteredChat = true
         }
 
-        if (!isPostExists) {
-            forwardMessageToProxyBot(result.message.chatId, result.message.id)
+        forwardMessageToProxyBot(isPostExists, isSticker, minithumbnailMd5, forwardChatId, result)
+    }
+}
 
-            if (!isSticker) {
-                if (minithumbnailMd5 != null) {
-                    XdMinithumbnail.new {
-                        md5 = minithumbnailMd5
-                        channelsFrom.add(result.message.chatId)
-                        forwardChatId?.let { channelsFrom.add(it) }
-                    }
+private fun forwardMessageToProxyBot(isPostExists: Boolean, isSticker: Boolean, minithumbnailMd5: String?, forwardChatId: Long?,  result: TdApi.UpdateNewMessage){
+    if (!isPostExists) {
+        forwardMessageToProxyBot(result.message.chatId, result.message.id)
+
+        if (!isSticker) {
+            if (minithumbnailMd5 != null) {
+                XdMinithumbnail.new {
+                    md5 = minithumbnailMd5
+                    channelsFrom.add(result.message.chatId)
+                    forwardChatId?.let { channelsFrom.add(it) }
                 }
             }
-        } else {
-            XdSticker.new { setId = (result.message.content as TdApi.MessageSticker).sticker.setId }
         }
+    } else {
+        XdSticker.new { setId = (result.message.content as TdApi.MessageSticker).sticker.setId }
     }
 }
 
