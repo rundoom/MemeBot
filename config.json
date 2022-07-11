@@ -4,7 +4,7 @@
   "main_channel_id": -1001236420112,
   "filtered_channel_id": -1001368387989,
   "sticker_channel_id": -1001331614309,
-  "bot_token": "1486877239:AAG46Q2qIJAhOrMQLpyBo-PJnBY67Rvg_Mw",
-  "phone_number": "89379885607",
+  "bot_token": "{must be a token}",
+  "phone_number": "{a phone number for login}",
   "db_source_dir": "database"
 }
